@@ -3,7 +3,7 @@ from swarm2 import *
 from codrone_edu import *
 
 
-def runSequence(self, swarm):
+def run_sequence(self, swarm):
     drones = swarm.get_drone_objects()
 
     drone1 = drones[0]
