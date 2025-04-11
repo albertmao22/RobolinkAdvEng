@@ -84,7 +84,7 @@ class SwarmGUI:
         self.create_control_buttons()
         self.default_colors = ['red', 'blue', 'orange', 'yellow', 'green', '#00ffff', 'purple', 'pink', 'white', 'black']
         if self.mode == "basic":
-            self.root.geometry("380x300")
+            self.root.geometry("380x500")
         elif self.mode == "choreo":
             self.root.geometry("1000x600")
         else:
@@ -782,54 +782,44 @@ class SwarmGUI:
         # print(f"Drone {drone_index} position updated to ({x_coord:.1f}, {y_coord:.1f}, {z_coord:.1f})")
 
     def create_grid(self):
-        if self.mode == "basic":
-            return
-        global swarm_drones, num_drones, rows, cols
-        self.hasGeneratedGrid = True
+        global swarm_drones, num_drones
 
-        # Connect to Swarm and Get Drone Objects
+        self.hasGeneratedGrid = True
         swarm_drones = self.swarm.get_drones()
         num_drones = len(swarm_drones)
 
-        # Clear Existing Canvas if Present
-        if hasattr(self, 'canvas_widget'):
-            self.canvas_widget.destroy()
-
-        # Import required matplotlib modules
-        import matplotlib.pyplot as plt
         from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
         from matplotlib.figure import Figure
 
-        # Create Figure and Axes
-        self.fig = Figure(figsize=(6, 6))
-        self.ax = self.fig.add_subplot(111)
+        if self.mode != "basic":
+            self.fig = Figure(figsize=(6, 6))
+            self.ax = self.fig.add_subplot(111)
 
-        # Configure the plot
-        self.ax.grid(True, linestyle='--', alpha=0.7)
-        self.ax.set_xlim(-2, 2)
-        self.ax.set_ylim(-2, 2)
-        self.ax.set_xlabel('X (m)')
-        self.ax.set_ylabel('Y (m)')
-        self.ax.set_title('Drone Positions')
+            # Configure the plot
+            self.ax.grid(True, linestyle='--', alpha=0.7)
+            self.ax.set_xlim(-2, 2)
+            self.ax.set_ylim(-2, 2)
+            self.ax.set_xlabel('X (m)')
+            self.ax.set_ylabel('Y (m)')
+            self.ax.set_title('Drone Positions')
 
-        # Make the plot background match the GUI
-        self.fig.patch.set_facecolor('#05001c')
-        self.ax.set_facecolor('white')
+            # Make the plot background match the GUI
+            self.fig.patch.set_facecolor('#05001c')
+            self.ax.set_facecolor('white')
 
-        # Add the plot to Tkinter
-        self.canvas_widget = FigureCanvasTkAgg(self.fig, master=self.right_frame)
-        self.canvas_widget.draw()
-        self.canvas_widget.get_tk_widget().pack(expand=True, fill='both', padx=10, pady=10)
+            # Add the plot to Tkinter
+            self.canvas_widget = FigureCanvasTkAgg(self.fig, master=self.right_frame)
+            self.canvas_widget.draw()
+            self.canvas_widget.get_tk_widget().pack(expand=True, fill='both', padx=10, pady=10)
 
-        # Set up the handlers
-        self.setup_click_handlers()
+            # Set up the handlers
+            self.setup_click_handlers()
 
-        # Store drone positions and plot elements
         self.drone_plots = []
         self.drone_annotations = []
         self.droneIcons = []
 
-        # Place Drone Icons on the Grid
+        # Place Drone Icons
         for i in range(num_drones):
             # Default position for the first drone
             if i == 0:
@@ -843,27 +833,25 @@ class SwarmGUI:
             color = self.default_colors[color_index]
             rgba_color = self.process_color(color)
 
-            # Plot drone position
-            if x_pos is not None and y_pos is not None:
-                drone_plot = self.ax.scatter(x_pos, y_pos, color=color, s=100)
+            # Create plot elements only in full mode
+            if self.mode != "basic":
+                if x_pos is not None and y_pos is not None:
+                    drone_plot = self.ax.scatter(x_pos, y_pos, color=color, s=100)
+                    annotation = self.ax.annotate(
+                        f'Drone {i}\n({x_pos:.1f}, {y_pos:.1f}, {z_pos: .1f})',
+                        (x_pos, y_pos),
+                        xytext=(0, 10),
+                        textcoords='offset points',
+                        ha='center',
+                        bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.7),
+                        fontsize=8
+                    )
+                else:
+                    drone_plot = None
+                    annotation = None
             else:
                 drone_plot = None
-            self.drone_plots.append(drone_plot)
-
-            # Add drone index and position annotation
-            if x_pos is not None and y_pos is not None:
-                annotation = self.ax.annotate(
-                    f'Drone {i}\n({x_pos:.1f}, {y_pos:.1f}, {z_pos: .1f})',
-                    (x_pos, y_pos),
-                    xytext=(0, 10),
-                    textcoords='offset points',
-                    ha='center',
-                    bbox=dict(boxstyle='round,pad=0.5', fc='white', alpha=0.7),
-                    fontsize=8
-                )
-            else:
                 annotation = None
-            self.drone_annotations.append(annotation)
 
             # Store drone information
             drone = {
@@ -900,8 +888,9 @@ class SwarmGUI:
             # Set drone LED color
             self.swarm.one_drone(drone["drone_index"], "set_drone_LED", *rgba_color)
 
-        # Draw the plot
-        self.canvas_widget.draw()
+        # Update the display for full mode
+        if self.mode != "basic":
+            self.canvas_widget.draw()
 
     def toggle_key_bindings(self):
         """Toggle keyboard controls on/off"""
@@ -949,6 +938,7 @@ class LaunchScreen:
         self.selected_mode = None
 
         self.root.geometry("350x400")
+
 
         # Title
         title_label = tk.Label(
